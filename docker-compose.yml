@@ -1,0 +1,45 @@
+version: '3.3'
+services:
+  virtuoso:
+    image: tenforce/virtuoso:virtuoso7.2.5
+    container_name: "virtuoso"
+    environment:
+      VIRT_Parameters_NumberOfBuffers: 51000
+      VIRT_Parameters_MaxDirtyBuffers: 37500
+      VIRT_Parameters_TN_MAX_memory: 4000000
+      VIRT_Parameters_TransactionAfterImageLimit: 500000
+      VIRT_SPARQL_ResultSetMaxRows: 1000
+      VIRT_SPARQL_MaxDataSourceSize: 10000
+      VIRT_SPARQL_MaxQueryCostEstimationTime: 0
+      VIRT_SPARQL_MaxQueryExecutionTime: 0
+      DBA_PASSWORD: dba
+      SPARQL_UPDATE: "true"
+      DEFAULT_GRAPH: "graph:test:discovery:default:"
+    ports:
+      - "8890:8890"
+    volumes:
+      - ./chebi_dev.sh:/chebi_dev.sh
+    command: bash -c /chebi_dev.sh
+  ## -------------------------------------------------
+  ## Activating CORS in VIRTUOSO
+  ##
+  selenium_cors:
+    image: inraep2m2/service-allow-cors-virtuoso
+    environment:
+      virtuoso_site: "http://virtuoso:8890/"
+      login: dba
+      passwd: dba
+      chrome_container: chrome
+    depends_on: [ chrome, virtuoso ]
+
+    command: >
+      bash -c 'sleep 15s && echo " **** configure CORS / Virtuoso  ****" && node virtuoso_cors.js'
+
+  ## -------------------------------------------------
+  ## Chrome / Selenium
+  ##
+  chrome:
+    container_name: chrome
+    image: selenium/standalone-chrome
+    environment:
+      START_XVFB: 'false'
