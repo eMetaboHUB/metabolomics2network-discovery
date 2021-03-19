@@ -142,7 +142,8 @@ case class ChebiDiscovery(
 
 
   def ontology_based_matching_static_level(
-                                            chebiIds: Seq[URI],
+                                            chebiStartIds: Seq[URI],
+                                            chebiEndIds: Seq[URI],
                                             deepLevel: Int = 1
                                           )
   : Future[Map[URI, Map[String, URI]]] = {
@@ -158,25 +159,18 @@ case class ChebiDiscovery(
         "chebiProp:is_substituent_group_from",
         "chebiProp:is_enantiomer_of")
 
-    //"rdfs:subClassOf"
-    /*
-    <http://purl.obolibrary.org/obo/CHEBI_15756> rdfs:subClassOf ?something .
-?something <http://www.w3.org/2002/07/owl#onProperty> ?t .
-?something ?prop <http://purl.obolibrary.org/obo/CHEBI_7896> .
-     */
-    val variables: Seq[String] = (1).to(deepLevel).map(level => "prop_" + level) ++ (1).to(deepLevel).map(level => "ac_" + level)
-
     val queryStart: SWDiscovery = instDiscovery
       .something("chebi_start")
-      .setList(chebiIds.distinct)
+      .setList(chebiStartIds.distinct)
 
     Future.sequence(List(
-      deepLevel.to(1, -1).foldLeft(queryStart) {
+      deepLevel.to(2, -1).foldLeft(queryStart) {
         (query: SWDiscovery, ind: Int) => {
           query.isSubjectOf(URI("rdfs:subClassOf"), "ac_" + ind)
         }
       }
-        .setList(chebiIds.distinct)
+        .isSubjectOf(URI("rdfs:subClassOf"), "chebi_end")
+        .setList(chebiEndIds.distinct)
         .select(List("chebi_start", "chebi_end"))
         .commit()
         .raw
@@ -198,7 +192,7 @@ case class ChebiDiscovery(
         .isSubjectOf(URI("owl:onProperty"), "prop_1")
         .focus("ac_1")
         .isSubjectOf(URI("owl:someValuesFrom"), "chebi_end")
-        .setList(chebiIds.distinct)
+        .setList(chebiEndIds.distinct)
         .filter.not.equal(QueryVariable("chebi_start"))
         .root
         .something("prop_1")
@@ -208,10 +202,10 @@ case class ChebiDiscovery(
         .raw
         .map(json =>
           json("results")("bindings").arr.map(row => {
-            val chebi_start = SparqlBuilder.createUri(row("chebi_start"))
-            val chebi_end = SparqlBuilder.createUri(row("chebi_end"))
-            val prop = SparqlBuilder.createUri(row("prop_1")).localName.split("#")(1)
-            chebi_start -> Map(prop -> chebi_end)
+              val chebi_start = SparqlBuilder.createUri(row("chebi_start"))
+              val chebi_end = SparqlBuilder.createUri(row("chebi_end"))
+              val prop = SparqlBuilder.createUri(row("prop_1")).localName.split("#")(1)
+              chebi_start -> Map(prop -> chebi_end)
           }).toMap
         )
     )).map(ll => ll.reduce((x, y) => (x ++ y)))
@@ -219,7 +213,7 @@ case class ChebiDiscovery(
 
   def ontology_based_matching(
                                             chebiIds: Seq[URI],
-                                            maxScore: Double = 4.5
+                                            maxScore: Double = 3.0
                                           )
   : Future[Seq[(URI,URI,String,Double)]] = {
 
@@ -240,7 +234,11 @@ case class ChebiDiscovery(
 
     val deepestLength = Math.round(maxScore)
     Future.sequence(deepestLength.to(1, -1).map(
-      deepLevel => ontology_based_matching_static_level(chebiIds, deepLevel.toInt)
+      deepLevel => Future.sequence(chebiIds.grouped(5)
+        .toList
+        .map( groupChebId =>
+          ontology_based_matching_static_level(groupChebId,chebiIds, deepLevel.toInt)))
+            .map(l => l.reduce( (x,y) => x ++ y ))
     )).map(
       (lm : Seq[Map[URI, Map[String, URI]]]) => {
         lm.zipWithIndex.flatMap( { case (m,i) =>
