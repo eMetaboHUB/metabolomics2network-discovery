@@ -40,20 +40,20 @@ object Metabolites2NetworkTest extends TestSuite {
     }
 
     test("ontology_based_matching") {
-      ChebiDiscovery().ontology_based_matching(List("http://purl.obolibrary.org/obo/CHEBI_36023",
-        "http://purl.obolibrary.org/obo/CHEBI_30828"))
+      ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_36023"),
+        List("http://purl.obolibrary.org/obo/CHEBI_36023", "http://purl.obolibrary.org/obo/CHEBI_30828"))
         .map( (response : Seq[(URI,URI,String,Double)]) =>{
           response.foreach(println)
         })
 
-      ChebiDiscovery().ontology_based_matching(List("http://purl.obolibrary.org/obo/CHEBI_15756",
-        "http://purl.obolibrary.org/obo/CHEBI_7896"))
+      ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_15756"),
+        List("http://purl.obolibrary.org/obo/CHEBI_15756", "http://purl.obolibrary.org/obo/CHEBI_7896"))
         .map( (response : Seq[(URI,URI,String,Double)]) =>{
           response.foreach(println)
         })
 
-      ChebiDiscovery().ontology_based_matching(List("http://purl.obolibrary.org/obo/CHEBI_90488",
-        "http://purl.obolibrary.org/obo/CHEBI_57880"))
+      ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_90488"),
+        List("http://purl.obolibrary.org/obo/CHEBI_90488", "http://purl.obolibrary.org/obo/CHEBI_57880"))
         .map( (response : Seq[(URI,URI,String,Double)]) =>{
           response.foreach(println)
         })

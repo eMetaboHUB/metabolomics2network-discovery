@@ -33,10 +33,26 @@ object Metabolites2NetworkPeakforestTest extends TestSuite {
 
   val tests = Tests {
     test("ontology_based_matching") {
-      ChebiDiscovery().ontology_based_matching(lChebIdPeakforest.map(s => URI(s)))
-        .map( (response : Seq[(URI,URI,String,Double)]) =>{
-          response.foreach(println)
-        })
+      lChebIdPeakforest
+        .map(s => URI(s))
+        .grouped(50)
+        .map(l => {
+          println(l)
+          l})
+        .map(
+          listGrouped => {
+            println("Start with group")
+            ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_34247"), listGrouped)
+              .map((response: Seq[(URI, URI, String, Double)]) => {
+                println("OK")
+                response.foreach(println)
+              })
+              .recover(err => {
+                println("ERRRRRRRRRO")
+                println(err)
+              })
+          })
+
     }
   }
 }
