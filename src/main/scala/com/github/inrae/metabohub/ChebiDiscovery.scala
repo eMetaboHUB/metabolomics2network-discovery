@@ -27,6 +27,8 @@ case class ChebiDiscovery(
         }""".stripMargin
 
                          ) {
+  /* send batch request by lot */
+  val groupBySize = 300
 
   val instDiscovery =
     SWDiscovery(StatementConfiguration.setConfigString(config_discovery))
@@ -73,7 +75,7 @@ case class ChebiDiscovery(
           .focus("ac_" + ind)
       }
     }
-      .console
+     // .console
       .select(listVariableAncestor)
       .commit()
       .raw
@@ -176,6 +178,7 @@ case class ChebiDiscovery(
       }
         .isSubjectOf(URI("rdfs:subClassOf"), "chebi_end")
         .setList(chebiEndIds.distinct)
+       // .console
         .select(List("chebi_start", "chebi_end"))
         .commit()
         .raw
@@ -202,7 +205,7 @@ case class ChebiDiscovery(
         .root
         .something("prop_1")
         .setList(listOwlOnProperties)
-     //   .console
+       // .console
         .select(List("chebi_start", "chebi_end", "prop_1"))
         .commit()
         .raw
@@ -217,11 +220,11 @@ case class ChebiDiscovery(
     )).map(ll => ll.reduce((x, y) => (x ++ y)))
   }
 
-  def ontology_based_matching(
+  def ontology_based_matching_internal(
                               chebiIdRef : URI ,
                               chebiIds: Seq[URI],
                               maxScore: Double = 3.0)
-  : Future[Seq[(URI,URI,String,Double)]] = {
+  : Future[Seq[(URI,String,Double)]] = {
 
     if (maxScore <= 0.0) throw ChebiDiscoveryException(
       s"""
@@ -240,23 +243,39 @@ case class ChebiDiscovery(
 
     val deepestLength = Math.round(maxScore)
     Future.sequence(deepestLength.to(1, -1).map(
-      deepLevel => Future.sequence(
-        chebiIds.grouped(300).toList.map(listGroupedChebId => ontology_based_matching_static_level(List(chebiIdRef),listGroupedChebId, deepLevel.toInt))
-        ++ chebiIds.grouped(300).toList.map(listGroupedChebId => ontology_based_matching_static_level(listGroupedChebId,List(chebiIdRef), deepLevel.toInt))
+      deepLevel => Future.sequence(List(ontology_based_matching_static_level(List(chebiIdRef),chebiIds, deepLevel.toInt)
+        ,ontology_based_matching_static_level(chebiIds,List(chebiIdRef), deepLevel.toInt))) )
           ).map(l => l.reduce( (x,y) => x ++ y ))
-    )).map(
+      .map(
       (lm : Seq[Map[URI, Map[String, URI]]]) => {
         lm.zipWithIndex.flatMap( { case (m,i) =>
         m.flatMap(v1 => {
           v1._2.map(v2=> {
-            v2._1 match {
-              case "is_a" => (v1._1,v2._2,v2._1,1.0+(deepestLength-i-1))
-              case _ => (v1._1,v2._2,v2._1,0.1+(deepestLength-i-1))
+            val targetUri =
+              if ( v1._1 == chebiIdRef ) v2._2 else v1._1
+            val indexDeep = i%2 /* Two List by deep */
+            val deep =  (deepestLength-indexDeep-1)
+            val score = v2._1 match {
+              case "is_a" if v1._1 == chebiIdRef => 1.0 + deep
+              case "is_a"                        => - ( 1.0 + deep )
+              case _ if v1._1 == chebiIdRef      => 0.1 + deep
+              case _                             => - (0.1 + deep)
             }
+            (targetUri,v2._1,score)
           })
         }).toSeq })
       })
     }
+
+  def ontology_based_matching(
+                               chebiIdRef : URI ,
+                               chebiIds: Seq[URI],
+                               maxScore: Double = 3.0) : Future[Seq[(URI,String,Double)]] =
+    Future.sequence(chebiIds.grouped(groupBySize).map(
+      chebIdSublist => {
+        ontology_based_matching_internal(chebiIdRef,chebIdSublist,maxScore)
+      }
+    )).map(l => l.reduce( (x,y) => x ++ y ))
 
   @JSExport("ontology_based_matching")
   def ontology_based_matching_js(
@@ -269,9 +288,8 @@ case class ChebiDiscovery(
       chebiIds.toList.map(s => URI(s)),
       maxScore
     ).map(lTuples => lTuples.map(tuple =>  Dynamic.literal(
-      "uri1" -> tuple._1.localName,
-      "uri2" -> tuple._2.localName,
-      "property" -> tuple._3,
-      "score" -> tuple._4)
+      "uri" -> tuple._1.localName,
+      "property" -> tuple._2,
+      "score" -> tuple._3)
     ).toJSArray).toJSPromise
 }
