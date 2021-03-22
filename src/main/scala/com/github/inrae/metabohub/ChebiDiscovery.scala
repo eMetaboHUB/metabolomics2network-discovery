@@ -282,14 +282,17 @@ case class ChebiDiscovery(
                                   chebiIdRef : String ,
                                   chebiIds: js.Array[String],
                                   maxScore: Double = 4.5
-                               ): js.Promise[js.Array[js.Object with js.Dynamic]] =
+                               ): js.Promise[js.Array[js.Object with js.Dynamic]] = {
+    
+    /* patch to check uri well formed */
     ontology_based_matching(
-      URI(chebiIdRef),
-      chebiIds.toList.map(s => URI(s)),
+      URI(js.URIUtils.encodeURI(chebiIdRef)),
+      chebiIds.toList.map(s => URI(js.URIUtils.encodeURI(s))),
       maxScore
     ).map(lTuples => lTuples.map(tuple =>  Dynamic.literal(
       "uri" -> tuple._1.localName,
       "property" -> tuple._2,
       "score" -> tuple._3)
     ).toJSArray).toJSPromise
+  }
 }

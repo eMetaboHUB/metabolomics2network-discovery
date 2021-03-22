@@ -5,6 +5,7 @@ import utest._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
+import scala.scalajs.js
 
 object Metabolites2NetworkPeakforestTest extends TestSuite {
 
@@ -20,6 +21,10 @@ object Metabolites2NetworkPeakforestTest extends TestSuite {
           println("OK")
           response.foreach(println)
         })
+    }
+
+    test("ontology_based_matching") {
+      ChebiDiscovery().ontology_based_matching_js(" ://purl.oboli 584", js.Array(" ://purl.oboli 584"))
     }
   }
 }
