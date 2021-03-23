@@ -1,10 +1,8 @@
 <html>
     <head>
         <meta charset="utf-8">
-
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-	<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/emetabohub/chebi-discovery@optim_big_list/dist/chebi-discovery-web.js"> </script>
-	
+	    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/emetabohub/chebi-discovery@1.0.0/dist/chebi-discovery-web.js"> </script>
         <script>
 	/* ----------------------getChebiIdsFromPeakforest--------------------------------------------      */
         function getChebiIdsFromPeakforest() { 
@@ -33,7 +31,7 @@
                          });                   
         }  
         /* ----------------------metabolomics2NetworkPeakforest--------------------------------------------      */
-	function metabolomics2NetworkPeakforest(lIdChebis) { 
+	async function metabolomics2NetworkPeakforest(lIdChebis) {
 			let config = `
 			{
 			     "sources" : [{
@@ -52,15 +50,33 @@
 			*/
 
 			{
-		
-			ChebiDiscovery(config)
-			   .ontology_based_matching(lIdChebis)
+			let maxDeep = 4.5 ;
+			let nbChEbiIdToFind = 50 ;
+            $("#metabolomics2network")
+				 .html("<h3>ontology based matching of</h3><p style=\"color:blue\">Number of ChEBid in PeakForest: "+lIdChebis.length+" Level Max:"+maxDeep+"</p>") ;
+
+            $("#metabolomics2network").append("<p style=\"color:green\">Finding for the first "+nbChEbiIdToFind+" ChEBIid</p>");
+
+
+		    for (let pas = 0; pas < nbChEbiIdToFind; pas++) {
+		      $("#metabolomics2network").append("<pre>"+ JSON.stringify(lIdChebis[pas])+"</pre>");
+		      await ChebiDiscovery(config)
+			   .ontology_based_matching(lIdChebis[pas],lIdChebis,maxDeep)
 			       .then ( (lTupleObject) => {
-			       $("#metabolomics2network")
-				 .html("<h3>ontology based matching of</h3> <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>")
+			       if (lTupleObject.length>0) {
+                           console.log(lIdChebis[pas] + "=======>" + JSON.stringify(lTupleObject))
+                           $("#metabolomics2network")
+                         .append("<code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>");
+				   } else {
+				      $("#metabolomics2network").append("<code style=\"color:#FF0000\">X</code>");
+				   }
 				})
 				.catch( msg => { console.error(msg) ; } ) ;
-			}
+			  }
+		    $("#metabolomics2network").append("<p style=\"color:blue\"> ========== END ========= </p>")
+
+		    }
+
 	}
          
 	/* ----------------------------------------------------     */	

@@ -28,7 +28,7 @@ case class ChebiDiscovery(
 
                          ) {
   /* send batch request by lot */
-  val groupBySize = 300
+  val groupBySize = 1000
 
   val instDiscovery =
     SWDiscovery(StatementConfiguration.setConfigString(config_discovery))
@@ -283,7 +283,7 @@ case class ChebiDiscovery(
                                   chebiIds: js.Array[String],
                                   maxScore: Double = 4.5
                                ): js.Promise[js.Array[js.Object with js.Dynamic]] = {
-    
+
     /* patch to check uri well formed */
     ontology_based_matching(
       URI(js.URIUtils.encodeURI(chebiIdRef)),
