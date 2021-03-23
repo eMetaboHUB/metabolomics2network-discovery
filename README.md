@@ -59,6 +59,12 @@ check if the chebi ontology is loaded with `docker-compose logs`
 open ./test.html in the web browser.
 
 
+### Lib generation
+
+```scala=
+fastOptJS::webpack
+```
+
 ## References
 <a id="1">[1]</a>
 Poupin, N., Vinson, F., Moreau, A. et al. Improving lipid mapping in Genome Scale Metabolic Networks using ontologies. Metabolomics 16, 44 (2020). https://doi.org/10.1007/s11306-020-01663-5

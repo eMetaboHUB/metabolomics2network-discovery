@@ -1,0 +1,99 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+	    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/emetabohub/chebi-discovery@1.0.0/dist/chebi-discovery-web.js"> </script>
+        <script>
+	/* ----------------------getChebiIdsFromPeakforest--------------------------------------------      */
+        function getChebiIdsFromPeakforest() { 
+        let config = SWDiscoveryConfiguration.setConfigString(`
+		{
+		     "sources" : [{
+		       "id"  : " - Peakforest Metabolomics - ",
+		       "url" : "https://peakforest.semantic-metabolomics.fr/sparql"
+		     }],
+		     "settings" : {
+		       "logLevel" : "off"
+		     }
+		}
+		`);
+
+	let query = SWDiscovery(config)
+                     .something()
+                      .isSubjectOf("https://metabohub.peakforest.org/ontology/property#chEBI","chebId")
+                        .select("chebId")
+                        .commit()
+                        .raw()
+                        .then((response) => {
+                                let listChebidPeakforest = response.results.bindings.map( obj => obj.chebId.value);
+				$("#chebIds").html(JSON.stringify(listChebidPeakforest));
+                                metabolomics2NetworkPeakforest(listChebidPeakforest);                               
+                         });                   
+        }  
+        /* ----------------------metabolomics2NetworkPeakforest--------------------------------------------      */
+	async function metabolomics2NetworkPeakforest(lIdChebis) {
+			let config = `
+			{
+			     "sources" : [{
+			       "id"  : " - Forum Semantic Metabolomics - ",
+			       "url" : "https://forum.semantic-metabolomics.fr/sparql"
+			     }],
+			     "settings" : {
+			       "logLevel" : "off"
+			     }
+			}
+			`
+
+			/*
+			    ---------------------------
+			    Metabolomics2Network
+			*/
+
+			{
+			let maxDeep = 4.5 ;
+			let nbChEbiIdToFind = 50 ;
+            $("#metabolomics2network")
+				 .html("<h3>ontology based matching of</h3><p style=\"color:blue\">Number of ChEBid in PeakForest: "+lIdChebis.length+" Level Max:"+maxDeep+"</p>") ;
+
+            $("#metabolomics2network").append("<p style=\"color:green\">Finding for the first "+nbChEbiIdToFind+" ChEBIid</p>");
+
+
+		    for (let pas = 0; pas < nbChEbiIdToFind; pas++) {
+		      $("#metabolomics2network").append("<pre>"+ JSON.stringify(lIdChebis[pas])+"</pre>");
+		      await ChebiDiscovery(config)
+			   .ontology_based_matching(lIdChebis[pas],lIdChebis,maxDeep)
+			       .then ( (lTupleObject) => {
+			       if (lTupleObject.length>0) {
+                           console.log(lIdChebis[pas] + "=======>" + JSON.stringify(lTupleObject))
+                           $("#metabolomics2network")
+                         .append("<code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>");
+				   } else {
+				      $("#metabolomics2network").append("<code style=\"color:#FF0000\">X</code>");
+				   }
+				})
+				.catch( msg => { console.error(msg) ; } ) ;
+			  }
+		    $("#metabolomics2network").append("<p style=\"color:blue\"> ========== END ========= </p>")
+
+		    }
+
+	}
+         
+	/* ----------------------------------------------------     */	
+	/*                Main -----------------*/
+
+	getChebiIdsFromPeakforest() ;
+	</script>
+     </head>
+  <body>
+    <h1> Demo ChebiDiscovery/Peakforest </h1>
+
+    <h2> I. Get Peakforest ChebIds</h2>
+    <div id="chebIds"></div>
+
+    <h2> II. Metabolomics2Network</h2>
+    <div id="metabolomics2network"></div>
+
+    </body>
+
+</html>

@@ -27,10 +27,13 @@ case class ChebiDiscovery(
         }""".stripMargin
 
                          ) {
+  /* send batch request by lot */
+  val groupBySize = 1000
 
   val instDiscovery =
     SWDiscovery(StatementConfiguration.setConfigString(config_discovery))
-      .prefix("chebiProp", "http://purl.obolibrary.org/obo/chebi#")
+      .prefix("c","http://purl.obolibrary.org/obo/")
+      .prefix("cp", "http://purl.obolibrary.org/obo/chebi#")
 
   /**
    * Give all level ancestor
@@ -72,7 +75,7 @@ case class ChebiDiscovery(
           .focus("ac_" + ind)
       }
     }
-      .console
+     // .console
       .select(listVariableAncestor)
       .commit()
       .raw
@@ -140,6 +143,10 @@ case class ChebiDiscovery(
       maxDeepLevel
     ).map(lUris => lUris.map(uri => uri.localName).toJSArray).toJSPromise
 
+  def shortenUri( uri : URI) : URI = uri.nameSpace match {
+    case "" => URI(uri.localName.replace("http://purl.obolibrary.org/obo/","c:"))
+    case _ => uri
+  }
 
   def ontology_based_matching_static_level(
                                             chebiStartIds: Seq[URI],
@@ -151,17 +158,17 @@ case class ChebiDiscovery(
 
     val listOwlOnProperties: List[URI] =
       List(
-        "chebiProp:is_conjugate_acid_of",
-        "chebiProp:is_conjugate_base_of",
-        "chebiProp:has_functional_parent",
-        "chebiProp:is_tautomer_of",
-        "chebiProp:has_parent_hydride",
-        "chebiProp:is_substituent_group_from",
-        "chebiProp:is_enantiomer_of")
+        "cp:is_conjugate_acid_of",
+        "cp:is_conjugate_base_of",
+        "cp:has_functional_parent",
+        "cp:is_tautomer_of",
+        "cp:has_parent_hydride",
+        "cp:is_substituent_group_from",
+        "cp:is_enantiomer_of")
 
     val queryStart: SWDiscovery = instDiscovery
       .something("chebi_start")
-      .setList(chebiStartIds.distinct)
+      .setList(chebiStartIds.map( uri => shortenUri(uri) ).distinct)
 
     Future.sequence(List(
       deepLevel.to(2, -1).foldLeft(queryStart) {
@@ -171,6 +178,7 @@ case class ChebiDiscovery(
       }
         .isSubjectOf(URI("rdfs:subClassOf"), "chebi_end")
         .setList(chebiEndIds.distinct)
+       // .console
         .select(List("chebi_start", "chebi_end"))
         .commit()
         .raw
@@ -192,11 +200,12 @@ case class ChebiDiscovery(
         .isSubjectOf(URI("owl:onProperty"), "prop_1")
         .focus("ac_1")
         .isSubjectOf(URI("owl:someValuesFrom"), "chebi_end")
-        .setList(chebiEndIds.distinct)
+        .setList(chebiEndIds.map( uri => shortenUri(uri)).distinct)
         .filter.not.equal(QueryVariable("chebi_start"))
         .root
         .something("prop_1")
         .setList(listOwlOnProperties)
+       // .console
         .select(List("chebi_start", "chebi_end", "prop_1"))
         .commit()
         .raw
@@ -211,11 +220,11 @@ case class ChebiDiscovery(
     )).map(ll => ll.reduce((x, y) => (x ++ y)))
   }
 
-  def ontology_based_matching(
-                                            chebiIds: Seq[URI],
-                                            maxScore: Double = 3.0
-                                          )
-  : Future[Seq[(URI,URI,String,Double)]] = {
+  def ontology_based_matching_internal(
+                              chebiIdRef : URI ,
+                              chebiIds: Seq[URI],
+                              maxScore: Double = 3.0)
+  : Future[Seq[(URI,String,Double)]] = {
 
     if (maxScore <= 0.0) throw ChebiDiscoveryException(
       s"""
@@ -234,37 +243,56 @@ case class ChebiDiscovery(
 
     val deepestLength = Math.round(maxScore)
     Future.sequence(deepestLength.to(1, -1).map(
-      deepLevel => Future.sequence(chebiIds.grouped(5)
-        .toList
-        .map( groupChebId =>
-          ontology_based_matching_static_level(groupChebId,chebiIds, deepLevel.toInt)))
-            .map(l => l.reduce( (x,y) => x ++ y ))
-    )).map(
+      deepLevel => Future.sequence(List(ontology_based_matching_static_level(List(chebiIdRef),chebiIds, deepLevel.toInt)
+        ,ontology_based_matching_static_level(chebiIds,List(chebiIdRef), deepLevel.toInt))) )
+          ).map(l => l.reduce( (x,y) => x ++ y ))
+      .map(
       (lm : Seq[Map[URI, Map[String, URI]]]) => {
         lm.zipWithIndex.flatMap( { case (m,i) =>
         m.flatMap(v1 => {
           v1._2.map(v2=> {
-            v2._1 match {
-              case "is_a" => (v1._1,v2._2,v2._1,1.0+(deepestLength-i-1))
-              case _ => (v1._1,v2._2,v2._1,0.1+(deepestLength-i-1))
+            val targetUri =
+              if ( v1._1 == chebiIdRef ) v2._2 else v1._1
+            val indexDeep = i%2 /* Two List by deep */
+            val deep =  (deepestLength-indexDeep-1)
+            val score = v2._1 match {
+              case "is_a" if v1._1 == chebiIdRef => 1.0 + deep
+              case "is_a"                        => - ( 1.0 + deep )
+              case _ if v1._1 == chebiIdRef      => 0.1 + deep
+              case _                             => - (0.1 + deep)
             }
+            (targetUri,v2._1,score)
           })
         }).toSeq })
       })
     }
 
+  def ontology_based_matching(
+                               chebiIdRef : URI ,
+                               chebiIds: Seq[URI],
+                               maxScore: Double = 3.0) : Future[Seq[(URI,String,Double)]] =
+    Future.sequence(chebiIds.grouped(groupBySize).map(
+      chebIdSublist => {
+        ontology_based_matching_internal(chebiIdRef,chebIdSublist,maxScore)
+      }
+    )).map(l => l.reduce( (x,y) => x ++ y ))
+
   @JSExport("ontology_based_matching")
   def ontology_based_matching_js(
+                                  chebiIdRef : String ,
                                   chebiIds: js.Array[String],
                                   maxScore: Double = 4.5
-                               ): js.Promise[js.Array[js.Object with js.Dynamic]] =
+                               ): js.Promise[js.Array[js.Object with js.Dynamic]] = {
+
+    /* patch to check uri well formed */
     ontology_based_matching(
-      chebiIds.toList.map(s => URI(s)),
+      URI(js.URIUtils.encodeURI(chebiIdRef)),
+      chebiIds.toList.map(s => URI(js.URIUtils.encodeURI(s))),
       maxScore
     ).map(lTuples => lTuples.map(tuple =>  Dynamic.literal(
-      "uri1" -> tuple._1.localName,
-      "uri2" -> tuple._2.localName,
-      "property" -> tuple._3,
-      "score" -> tuple._4)
+      "uri" -> tuple._1.localName,
+      "property" -> tuple._2,
+      "score" -> tuple._3)
     ).toJSArray).toJSPromise
+  }
 }
