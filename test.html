@@ -1,115 +1,29 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-        <!--<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/p2m2/discovery@0.0.3/dist/discovery-web.min.js"> </script>-->
-        <!-- sbt fastOptJS::webpack before start this test -->
-        <script
-                type="text/javascript"
-                src="/media/olivier/hdd-local/workspace/INRAE/P2M2/chebi-discovery/target/scala-2.13/scalajs-bundler/main/chebi-discovery-fastopt-bundle.js"></script>
+        <script type="text/javascript" src="./target/scala-2.13/scalajs-bundler/main/chebi-discovery-fastopt-bundle.js"> </script>
         <script>
-
-        var config = `
-        {
+         let config = `{
              "sources" : [{
-               "id"  : " - Sparql Endpoint - ",
-               "url" : "http://localhost:8890/sparql"
-             }],
-             "settings" : {
-               "logLevel" : "off"
-             }
-        }
-        `
+               "id"  : " - Forum Semantic Metabolomics - ",
+			         "url" : "https://forum.semantic-metabolomics.fr/sparql"
+             }]
+        }`;
 
-        /*
-            ---------------------------
-            Metabolomics2Network
-        */
 
-        {
-        var lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_15756","http://purl.obolibrary.org/obo/CHEBI_7896"]
+        let chebIdRef="http://purl.obolibrary.org/obo/CHEBI_15756";
+        let lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_7896"];
+        let maxDeep = 3.0 ;
 
         ChebiDiscovery(config)
-           .ontology_based_matching(lIdChebis)
+           .ontology_based_matching(chebIdRef,lIdChebis,maxDeep)
                .then ( (lTupleObject) => {
-               $("#metabolomics2network1")
-                 .html("<h3>ontology based matching of</h3> <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>")
-                })
-                .catch( msg => { console.error(msg) ; } ) ;
-        }
+                   let div = document.createElement("div") ;
+                   div.innerHTML = "<h3>ontology based matching of</h3> <pre>"+JSON.stringify(lTupleObject)+"</code>" ;
+                   document.body.appendChild(div);
+               })
+               .catch( msg => { console.error(msg) ; } ) ;
 
-        {
-        var lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_90488","http://purl.obolibrary.org/obo/CHEBI_57880"]
-
-        ChebiDiscovery(config)
-           .ontology_based_matching(lIdChebis)
-               .then ( (lTupleObject) => {
-               $("#metabolomics2network2")
-                 .html("<h3>ontology based matching of</h3> <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>")
-                })
-                .catch( msg => { console.error(msg) ; } ) ;
-        }
-
-        {
-        var lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_36023","http://purl.obolibrary.org/obo/CHEBI_30828"]
-
-        ChebiDiscovery(config)
-           .ontology_based_matching(lIdChebis)
-               .then ( (lTupleObject) => {
-               $("#metabolomics2network3")
-                 .html("<h3>ontology based matching of</h3> <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code style=\"color:#FF0000\">"+JSON.stringify(lTupleObject)+"</code>")
-                })
-                .catch( msg => { console.error(msg) ; } ) ;
-        }
-
-
-        /*
-            ---------------------------
-            ancestor_level
-        */
-        {
-        var lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_16359"]
-
-        ChebiDiscovery(config)
-           .ancestor_level(lIdChebis,deepLevel=3)
-               .then ( (lUris) => {
-               $("#ancestors")
-                 .html("Ancestor list of <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code>"+JSON.stringify(lUris)+"</code>")
-                })
-                .catch( msg => { console.error(msg) ; } ) ;
-        }
-        /*
-            ---------------------------
-            lowest_common_ancestor
-        */
-        {
-        var lIdChebis = ["http://purl.obolibrary.org/obo/CHEBI_16359","http://purl.obolibrary.org/obo/CHEBI_36260","http://purl.obolibrary.org/obo/CHEBI_43602"]
-
-        ChebiDiscovery(config)
-          .lowest_common_ancestor(lIdChebis)
-            .then ( (lUris) => {
-               $("#common_ancestors")
-                .html("Common ancestor of <pre>"+ JSON.stringify(lIdChebis)+"</pre><br/><code>"+JSON.stringify(lUris)+"</code><br/>should be <pre>\"http://purl.obolibrary.org/obo/CHEBI_24663\"</pre>")
-             })
-             .catch( msg => { console.error(msg) ; } ) ;
-        }
-
-       </script>
-    </head>
-    <body>
-    <h1> Demo ChebiDiscovery </h1>
-
-    <h2> I. <a href="https://forgemia.inra.fr/metexplore/metabolomics2network">Metabolomics2Network</a> </h2>
-
-    <div id="metabolomics2network1"></div>
-    <div id="metabolomics2network2"></div>
-    <div id="metabolomics2network3"></div>
-
-    <h2> II. Get Ancestors of a ChEBI ID List and a level to reach</h2>
-    <div id="ancestors"></div>
-
-    <h2> III. Get Common Ancestors of a ChEBI ID List</h2>
-    <div id="common_ancestors"></div>
-
-    </body>
+</script>
+    <body/>
 </html>

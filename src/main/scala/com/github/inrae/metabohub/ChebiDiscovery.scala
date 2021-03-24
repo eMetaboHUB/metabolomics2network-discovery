@@ -170,7 +170,7 @@ case class ChebiDiscovery(
       .something("chebi_start")
       .setList(chebiStartIds.map( uri => shortenUri(uri) ).distinct)
 
-    Future.sequence(List(
+      Future.sequence(List(
       deepLevel.to(2, -1).foldLeft(queryStart) {
         (query: SWDiscovery, ind: Int) => {
           query.isSubjectOf(URI("rdfs:subClassOf"), "ac_" + ind)
@@ -178,7 +178,7 @@ case class ChebiDiscovery(
       }
         .isSubjectOf(URI("rdfs:subClassOf"), "chebi_end")
         .setList(chebiEndIds.distinct)
-       // .console
+        //.console
         .select(List("chebi_start", "chebi_end"))
         .commit()
         .raw
@@ -205,7 +205,7 @@ case class ChebiDiscovery(
         .root
         .something("prop_1")
         .setList(listOwlOnProperties)
-       // .console
+        //.console
         .select(List("chebi_start", "chebi_end", "prop_1"))
         .commit()
         .raw
@@ -217,7 +217,20 @@ case class ChebiDiscovery(
               chebi_start -> Map(prop -> chebi_end)
           }).toMap
         )
-    )).map(ll => ll.reduce((x, y) => (x ++ y)))
+    ))
+        .map(ll => ll.reduce((x, y) => (x ++ y))
+    ).map( x => {
+        /*
+        println("==============================   ontology_based_matching_static_level ===================================")
+        println(s"INPUT LSTART:${chebiStartIds}")
+        println(s"INPUT LEND:${chebiEndIds}")
+        println(s"DEEP:${deepLevel}")
+        println(" --------------- RESULTS --------- ")
+        println(x)
+        println(" ====================================================================")*/
+        x
+      })
+
   }
 
   def ontology_based_matching_internal(
@@ -241,36 +254,56 @@ case class ChebiDiscovery(
 
          """.stripMargin)
 
-    val deepestLength = Math.round(maxScore)
-    Future.sequence(deepestLength.to(1, -1).map(
-      deepLevel => Future.sequence(List(ontology_based_matching_static_level(List(chebiIdRef),chebiIds, deepLevel.toInt)
-        ,ontology_based_matching_static_level(chebiIds,List(chebiIdRef), deepLevel.toInt))) )
-          ).map(l => l.reduce( (x,y) => x ++ y ))
-      .map(
-      (lm : Seq[Map[URI, Map[String, URI]]]) => {
-        lm.zipWithIndex.flatMap( { case (m,i) =>
-        m.flatMap(v1 => {
-          v1._2.map(v2=> {
-            val targetUri =
-              if ( v1._1 == chebiIdRef ) v2._2 else v1._1
-            val indexDeep = i%2 /* Two List by deep */
-            val deep =  (deepestLength-indexDeep-1)
-            val score = v2._1 match {
-              case "is_a" if v1._1 == chebiIdRef => 1.0 + deep
-              case "is_a"                        => - ( 1.0 + deep )
-              case _ if v1._1 == chebiIdRef      => 0.1 + deep
-              case _                             => - (0.1 + deep)
-            }
-            (targetUri,v2._1,score)
-          })
-        }).toSeq })
+    val deepestLength = Math.ceil(maxScore).toInt
+    val LL1=deepestLength.to(1, -1).map(
+      deepLevel => {
+
+        val res1 = ontology_based_matching_static_level(List(chebiIdRef),chebiIds, deepLevel)
+        val res2 = ontology_based_matching_static_level(chebiIds,List(chebiIdRef), deepLevel)
+          (deepLevel-1,res1,res2)
       })
+      .map(
+        deppLevelRes1Res2 => {
+          val deep = deppLevelRes1Res2._1
+          val chefLeft =  deppLevelRes1Res2._2
+          val chefRight =  deppLevelRes1Res2._3
+
+
+
+          val L1 : Future[Seq[(URI,String,Double)]] =
+
+            chefLeft.map(fm => {
+              fm.flatMap(v1 => {
+                v1._2.map(v2=> {
+                  (v2._2,v2._1, v2._1 match {
+                    case "is_a" => 1.0 + deep
+                    case _      => 0.1 + deep
+                  })
+               })
+            }).toSeq})
+
+          val L2: Future[Seq[(URI, String, Double)]] =
+            chefRight.map(fm => {
+                  fm.flatMap(v1 => {
+                    v1._2.map(v2=> {
+                      (v1._1,v2._1, v2._1 match {
+                        case "is_a" => - 1.0 - deep
+                        case _      => - 0.1 - deep
+                      })
+                    }).toSeq
+                  }).toSeq})
+
+          Future.sequence(List(L1,L2)).map( _.flatten )
+
+      })
+
+    Future.sequence(LL1).map(_.flatten)
     }
 
   def ontology_based_matching(
                                chebiIdRef : URI ,
                                chebiIds: Seq[URI],
-                               maxScore: Double = 3.0) : Future[Seq[(URI,String,Double)]] =
+                               maxScore: Double = 4.5) : Future[Seq[(URI,String,Double)]] =
     Future.sequence(chebiIds.grouped(groupBySize).map(
       chebIdSublist => {
         ontology_based_matching_internal(chebiIdRef,chebIdSublist,maxScore)

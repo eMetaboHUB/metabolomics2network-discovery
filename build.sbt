@@ -62,6 +62,7 @@ lazy val root = project.in(file(".")).
         .withPrettyPrint(true)
         .withSourceMap(true)
         .withModuleKind(ModuleKind.CommonJSModule)
+        .withParallel(false)
     },
     scalaJSLinkerConfig in (Compile, fullOptJS) ~= {
       _.withSourceMap(false)
