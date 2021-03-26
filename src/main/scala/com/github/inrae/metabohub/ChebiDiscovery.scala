@@ -10,7 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.Dynamic
-import scala.scalajs.js.JSConverters.{JSRichFutureNonThenable, JSRichIterableOnce}
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
 
@@ -27,7 +27,55 @@ case class ChebiDiscovery(
         }""".stripMargin
 
                          ,groupBySize : Int = 1000) {
-  /* send batch request by lot */
+  /**
+   *  implementation based of the ontology based matching describe in the
+   * "Improving lipid mapping in Genome Scale Metabolic Networks using ontologies." using the
+   *  Chemical Entities of Biological Interest (ChEBI)
+   *
+   *
+   * - output : list of object `{uri: <string>, property: <string> , score: <double>}`
+   * - `uri` uri from the input list
+   * - `property` possible value : `"is_conjugate_acid_of", "is_conjugate_base_of",
+   * "has_functional_parent","is_tautomer_of","chas_parent_hydride","is_substituent_group_from",
+   * "is_enantiomer_of"`
+   * - `score` distance between `uri` and `chebid` . distance is positive (1.0) when `chebid` matches a more generic class
+   * in the list. The distance is slightly increased (by 0.1) when a relation different tha `is_a` of the lipid
+   * is present in the `listChebIds`
+   *
+   * @param chebiIdRef a reference ChEBI id : `String`
+   * @param chebiIds a list of CheBid : `Array[String]`
+   * @param maxScore (optional) max score to reach : `Double` (default : `4.5`)
+   * @return list of object `{uri: <string>, property: <string> , score: <double>}`
+   */
+    
+  @JSExport("ontology_based_matching")
+  def ontology_based_matching_js(
+                                  chebiIdRef : String ,
+                                  chebiIds: js.Array[String],
+                                  maxScore: Double = 4.5
+                                ): js.Promise[js.Array[js.Object with js.Dynamic]] = {
+
+    /* patch to check uri well formed */
+    ontology_based_matching(
+      URI(js.URIUtils.encodeURI(chebiIdRef)),
+      chebiIds.toList.map(s => URI(js.URIUtils.encodeURI(s))),
+      maxScore
+    ).map(lTuples => lTuples.map(tuple =>  Dynamic.literal(
+      "uri" -> tuple._1.localName,
+      "property" -> tuple._2,
+      "score" -> tuple._3)
+    ).toJSArray).toJSPromise
+  }
+
+  def ontology_based_matching(
+                               chebiIdRef : URI ,
+                               chebiIds: Seq[URI],
+                               maxScore: Double = 4.5) : Future[Seq[(URI,String,Double)]] =
+    Future.sequence(chebiIds.grouped(groupBySize).map(
+      chebIdSublist => {
+        ontology_based_matching_internal(chebiIdRef,chebIdSublist,maxScore)
+      }
+    )).map(l => l.reduce( (x,y) => x ++ y ))
 
   val instDiscovery =
     SWDiscovery(StatementConfiguration.setConfigString(config_discovery))
@@ -192,33 +240,4 @@ case class ChebiDiscovery(
 
     Future.sequence(LL1).map(_.flatten)
     }
-
-  def ontology_based_matching(
-                               chebiIdRef : URI ,
-                               chebiIds: Seq[URI],
-                               maxScore: Double = 4.5) : Future[Seq[(URI,String,Double)]] =
-    Future.sequence(chebiIds.grouped(groupBySize).map(
-      chebIdSublist => {
-        ontology_based_matching_internal(chebiIdRef,chebIdSublist,maxScore)
-      }
-    )).map(l => l.reduce( (x,y) => x ++ y ))
-
-  @JSExport("ontology_based_matching")
-  def ontology_based_matching_js(
-                                  chebiIdRef : String ,
-                                  chebiIds: js.Array[String],
-                                  maxScore: Double = 4.5
-                               ): js.Promise[js.Array[js.Object with js.Dynamic]] = {
-
-    /* patch to check uri well formed */
-    ontology_based_matching(
-      URI(js.URIUtils.encodeURI(chebiIdRef)),
-      chebiIds.toList.map(s => URI(js.URIUtils.encodeURI(s))),
-      maxScore
-    ).map(lTuples => lTuples.map(tuple =>  Dynamic.literal(
-      "uri" -> tuple._1.localName,
-      "property" -> tuple._2,
-      "score" -> tuple._3)
-    ).toJSArray).toJSPromise
-  }
 }
