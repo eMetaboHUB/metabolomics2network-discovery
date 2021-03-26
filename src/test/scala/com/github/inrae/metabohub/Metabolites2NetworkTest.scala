@@ -9,12 +9,15 @@ import scala.language.implicitConversions
 object Metabolites2NetworkTest extends TestSuite {
   def tests = Tests {
 
-    test (" chebi - Lowest Common Ancestor ") {
+    test (" chebi -  Metabolites2NetworkTest examples ") {
 
       val data = List("http://purl.obolibrary.org/obo/CHEBI_15756", "http://purl.obolibrary.org/obo/CHEBI_7896").map(s => URI(s))
 
       ChebiDiscovery().ontology_based_matching_static_level(data,data)
         .map( (response : Map[URI,Map[String,URI]]) =>{
+
+          println(response)
+
           assert( response == Map(
             URI("http://purl.obolibrary.org/obo/CHEBI_15756") -> Map("is_conjugate_acid_of"->URI("http://purl.obolibrary.org/obo/CHEBI_7896"),
               URI("http://purl.obolibrary.org/obo/CHEBI_7896") -> Map("is_conjugate_base_of"->URI("http://purl.obolibrary.org/obo/CHEBI_15756"))
@@ -24,6 +27,9 @@ object Metabolites2NetworkTest extends TestSuite {
       val data2 = List("http://purl.obolibrary.org/obo/CHEBI_90488", "http://purl.obolibrary.org/obo/CHEBI_57880").map(s => URI(s))
       ChebiDiscovery().ontology_based_matching_static_level(data2,data2,2)
         .map( (response : Map[URI,Map[String,URI]]) =>{
+
+          println(response)
+
           assert( response == Map(
             URI("http://purl.obolibrary.org/obo/CHEBI_90488") -> Map("is_conjugate_acid_of"->URI("http://purl.obolibrary.org/obo/CHEBI_57880"))
             ))
@@ -32,6 +38,9 @@ object Metabolites2NetworkTest extends TestSuite {
       val data3 = List("http://purl.obolibrary.org/obo/CHEBI_36023", "http://purl.obolibrary.org/obo/CHEBI_30828").map(s => URI(s))
       ChebiDiscovery().ontology_based_matching_static_level(data3,data3,2)
         .map( (response : Map[URI,Map[String,URI]]) =>{
+
+          println(response)
+
           assert( response == Map(
             URI("http://purl.obolibrary.org/obo/CHEBI_30828") -> Map("is_conjugate_base_of"->URI("http://purl.obolibrary.org/obo/CHEBI_36023"))
           ))
@@ -41,6 +50,9 @@ object Metabolites2NetworkTest extends TestSuite {
       ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_15756"),
         List("http://purl.obolibrary.org/obo/CHEBI_7896"),4.5)
         .map( (response : Seq[(URI,String,Double)]) =>{
+
+          println(response)
+
           assert(response.length == 1)
           assert(response(0)._3 == -0.1)
         }).recover( err => {
@@ -50,6 +62,9 @@ object Metabolites2NetworkTest extends TestSuite {
       ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_90488"),
         List("http://purl.obolibrary.org/obo/CHEBI_57880"))
         .map( (response : Seq[(URI,String,Double)]) =>{
+
+          println(response)
+
           assert(response.length == 1)
           assert(response(0)._3 == 1.1 && response(0)._2 == "is_conjugate_acid_of")
         })
@@ -57,6 +72,9 @@ object Metabolites2NetworkTest extends TestSuite {
       ChebiDiscovery().ontology_based_matching(URI("http://purl.obolibrary.org/obo/CHEBI_36023"),
         List("http://purl.obolibrary.org/obo/CHEBI_30828"))
         .map( (response : Seq[(URI,String,Double)]) =>{
+
+          println(response)
+
           assert(response.length == 1)
           assert(response(0)._1 == URI("http://purl.obolibrary.org/obo/CHEBI_30828"))
           assert(response(0)._2 == "is_conjugate_base_of")

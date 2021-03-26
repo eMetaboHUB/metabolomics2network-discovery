@@ -19,7 +19,7 @@
 		`);
 
 	let query = SWDiscovery(config)
-                     .something()
+                     .something("pagePeakF")
                       .isSubjectOf("https://metabohub.peakforest.org/ontology/property#chEBI","chebId")
                         .select("chebId")
                         .commit()
@@ -50,8 +50,8 @@
 			*/
 
 			{
-			let maxDeep = 4.5 ;
-			let nbChEbiIdToFind = 50 ;
+			let maxDeep = 4 ;
+			let nbChEbiIdToFind = 10 ;
             $("#metabolomics2network")
 				 .html("<h3>ontology based matching of</h3><p style=\"color:blue\">Number of ChEBid in PeakForest: "+lIdChebis.length+" Level Max:"+maxDeep+"</p>") ;
 
