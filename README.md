@@ -6,8 +6,13 @@
   *"Improving lipid mapping in Genome Scale Metabolic Networks using ontologies."* [[1]](#1) using the 
   [Chemical Entities of Biological Interest (ChEBI)](https://www.ebi.ac.uk/chebi/)
 
+## API 
+ 
+ - ontology_based_matching : build path possibility between an URI and a list of URIs 
+ - build_graph             : get a sequence of chebiid using results from `ontology_based_matching`
+ - graph_html              : get html item list using the sequence of chebiid resulting from build_graph
   
-### Javascript Examples 
+### ontology_based_matching Javascript Examples 
 
 - input : 
   - `chebid` a reference ChEBI id : `String`

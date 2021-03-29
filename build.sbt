@@ -56,6 +56,7 @@ lazy val root = project.in(file(".")).
   // add Scala.js-specific settings and tasks to the `it` configuration
   settings(inConfig(IntegrationTest)(ScalaJSPlugin.testConfigSettings): _*).
   settings(
+    requireJsDomEnv in Test := true,
     getPackageSetting,
     scalaJSLinkerConfig in (Compile, fastOptJS ) ~= {
       _.withOptimizer(false)
@@ -69,9 +70,9 @@ lazy val root = project.in(file(".")).
         .withModuleKind(ModuleKind.CommonJSModule)
     },
     webpackBundlingMode := BundlingMode.LibraryAndApplication(),
-    npmDependencies in Compile ++= Seq("rdfxml-streaming-parser" -> "1.4.0"),
     libraryDependencies ++= Seq(
-      "com.github.p2m2" %%% "discovery" % "local-SNAPSHOT",
+      "com.github.p2m2" %%% "discovery" % "0.1.0",
+      "com.lihaoyi" %%% "scalatags" % "0.9.4",
       "net.exoego" %%% "scala-js-nodejs-v14" % "0.13.0",
       "com.lihaoyi" %%% "utest" % "0.7.7" % "test"
     ) ,
