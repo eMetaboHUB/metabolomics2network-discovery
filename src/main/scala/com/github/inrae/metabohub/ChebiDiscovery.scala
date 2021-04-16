@@ -124,8 +124,7 @@ case class ChebiDiscovery(
       "cp:is_tautomer_of",
       "cp:has_parent_hydride",
       "cp:is_substituent_group_from",
-      "cp:is_enantiomer_of",
-      "cp:has_role")
+      "cp:is_enantiomer_of")
 
   def ontology_based_matching_static_level(
                                             chebiStartIds: Seq[URI],
