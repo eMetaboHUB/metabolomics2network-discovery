@@ -11,7 +11,9 @@
  - ontology_based_matching : build path possibility between an URI and a list of URIs 
  - build_graph             : get a sequence of chebiid using results from `ontology_based_matching`
  - graph_html              : get html item list using the sequence of chebiid resulting from build_graph
-  
+ - get_has_role            : get role defining by the RO_0000087 relation about a chebidid
+ - get_description         : get information about a chebidid
+
 ### ontology_based_matching Javascript Examples 
 
 - input : 

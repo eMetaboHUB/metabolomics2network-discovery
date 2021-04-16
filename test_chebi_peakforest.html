@@ -78,6 +78,20 @@
 				   } else {
 				      $("#metabolomics2network").append("<code style=\"color:#FF0000\">X</code>");
 				   }
+
+				    let chebi_role = await ChebiDiscovery(config).get_has_role(lIdChebis[pas]) ;
+				    $("#metabolomics2network").append("<pre>ROLE:"+chebi_role+"</pre>");
+
+				    console.log("ROLE");
+				    console.log(chebi_role);
+
+				    chebi_role.map(
+				    async role => {
+				        let description = await ChebiDiscovery(config).get_description(role) ;
+				        console.log("DESCRIPTION");
+				        console.log(description);
+				        $("#metabolomics2network").append("<pre>DESCRIPTION "+role+":"+JSON.stringify(description)+"</pre>");
+				    })
 				})
 				.catch( msg => { console.error(msg) ; } ) ;
 			  }
