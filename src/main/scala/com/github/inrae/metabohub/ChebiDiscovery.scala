@@ -12,7 +12,7 @@ import scalatags.JsDom.all._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.Dynamic
+import scala.scalajs.js.{Dynamic, |}
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -93,6 +93,25 @@ case class ChebiDiscovery(
   @JSExport("graph_html")
   def graph_html_js(path : js.Array[(String,String)]) : String =
     graph_html(path.map(v => (v._1,URI(v._2))).toSeq).render.innerHTML
+
+  /**
+   * Get role of a CHEBI Id
+   * @param chebiUri : the Chebi Id
+   * @return String : a Chebi ID defining in the biological role
+   */
+  @JSExport("get_has_role")
+  def get_has_role_js(chebiUri : String) : js.Promise[js.Array[String]] =
+    get_has_role(chebiUri).map( _.map( _.localName).toJSArray ).toJSPromise
+
+
+  /**
+   * Get Description ( map of properties and associated literal ) of a CHEBI Id
+   * @param chebiUri : the Chebi Id
+   * @return Object : object with key (property) and values
+   */
+  @JSExport("get_description")
+  def get_description_js(chebiUri : String|URI) : js.Promise[js.Dictionary[String]] =
+    get_description(URI(chebiUri.toString)).map( _.map( kv => (kv._1.localName -> kv._2) ).toJSDictionary ).toJSPromise
 
 
   def ontology_based_matching(
@@ -342,6 +361,44 @@ case class ChebiDiscovery(
         ))
       }
     }
+  }
+
+  def get_has_role(chebi: URI)
+  : Future[Seq[URI]] = {
+
+    instDiscovery
+      .something()
+       .set(chebi)
+      .isSubjectOf(URI("rdfs:subClassOf"), "ac")
+        .isSubjectOf(URI("owl:onProperty"))
+          .set(URI("http://purl.obolibrary.org/obo/RO_0000087"))
+      .focus("ac")
+        .isSubjectOf(URI("owl:someValuesFrom"),"idChebi_role")
+      .select(List("idChebi_role"))
+      .commit()
+      .raw
+      .map(json =>
+        json("results")("bindings").arr.map(row => SparqlBuilder.createUri(row("idChebi_role"))).toSeq
+      )
+  }
+
+
+  def get_description(chebi: URI)
+  : Future[Map[URI,String]] = {
+
+    instDiscovery
+      .something()
+      .set(chebi)
+      .isSubjectOf(QueryVariable("prop"), "val")
+      .filter.isLiteral
+      .select(List("prop","val"))
+      .commit()
+      .raw
+      .map(json =>
+        json("results")("bindings").arr.map(
+          row =>
+            SparqlBuilder.createUri(row("prop")) -> SparqlBuilder.createLiteral(row("val")).naiveLabel).toMap
+      )
   }
 
 }
