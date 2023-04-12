@@ -3,7 +3,7 @@
 [![Scala.js](https://www.scala-js.org/assets/badges/scalajs-1.5.0.svg)](https://www.scala-js.org)
 
 - ScalaJs functional implementation based of the ontology based matching describe in the 
-  *"Improving lipid mapping in Genome Scale Metabolic Networks using ontologies."* [[1]](#1) using the 
+  [*"Improving lipid mapping in Genome Scale Metabolic Networks using ontologies."*](https://forgemia.inra.fr/metexplore/metabolomics2network) [[1]](#1) using the 
   [Chemical Entities of Biological Interest (ChEBI)](https://www.ebi.ac.uk/chebi/)
 
 ## API 
